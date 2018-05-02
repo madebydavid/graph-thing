@@ -1,0 +1,98 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+	<script type="text/javascript">
+	window.onload = function () {
+
+		var dps = []; // dataPoints
+
+		var responseData = [];
+
+		var chart = new CanvasJS.Chart("chartContainer",{
+			title :{
+				text: "Sin(t) - Live"
+			},			
+			data: [{
+				type: "line",
+				dataPoints: dps 
+			}]
+		});
+
+		var displayUpdateIntervalMilliseconds = 10;
+		var displayTimeWindowMilliseconds = 5000;
+
+		var dataBufferMilliseconds = 500;
+		var dataUpdateIntervalMilliseconds = 100;
+
+		var updateChart = function () {
+
+			/* define the time window we want to draw */
+			var timestamp = (new Date).getTime() - dataBufferMilliseconds;
+			var minTime = timestamp - displayTimeWindowMilliseconds; 
+
+			/* filter the data for that time window */
+			var displaySlice = responseData.filter(function(dataPoint) {
+				return ((dataPoint.x > minTime) && (dataPoint.x < timestamp));
+			});
+
+			/* sort it */
+			displaySlice = displaySlice.sort(function(dataPointA, dataPointB) {
+				if (dataPointA.x < dataPointB.x) return -1;
+				if (dataPointA.x > dataPointB.x) return 1;
+				return 0;
+			});
+
+			/* copy onto graph data points */
+			dps.length = 0;
+			dps.push.apply(dps, displaySlice);
+
+			/* render */
+			chart.render();		
+		
+		};
+
+		var updateData = function () {
+
+			$.ajax({
+				type: 'get',
+				url: 'getData.php?count=10&x=' + ((new Date).getTime() / 1) + '&step=10',
+
+				success: function(data) {
+
+					$.each(data, function(i, dataPoint) {
+						responseData.push(dataPoint);
+					});	
+
+				}
+			});
+		}
+ 
+		setInterval(function(){ updateChart() }, displayUpdateIntervalMilliseconds); 
+
+		setInterval(function(){ updateData() }, dataUpdateIntervalMilliseconds); 
+
+		setInterval(function(){ updateDelay() }, 1000);
+
+		/* this function is to show us what the current available data buffer size is */
+		var updateDelay = function () {
+
+			if ((0 == responseData.length) || (0 == dps.length)) return;	
+
+			var delay = responseData[responseData.length -1].x - dps[dps.length -1].x;
+
+			$('.delay').text('Current data buffer size: ' + delay + ' Milliseconds');
+
+		}
+
+	}
+	</script>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/canvasjs/1.4.1/canvas.min.js"></script>
+</head>
+<body>
+	<div id="chartContainer" style="height: 300px; width:100%;">
+	</div>
+	<span class="delay"></span>
+</body>
+</html>

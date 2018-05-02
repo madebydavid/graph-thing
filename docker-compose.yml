@@ -1,0 +1,11 @@
+version: '2'
+
+services:
+
+  www:
+    build: .
+    ports:
+      - "8080:80"
+    working_dir: /opt/graph
+    volumes:
+      - ./:/opt/graph
